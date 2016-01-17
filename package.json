@@ -1,0 +1,28 @@
+{
+  "name": "homebridge-connectedbytcp",
+  "version": "0.0.1",
+  "description": "Connected by TCP plugin for homebridge: https://github.com/nfarina/homebridge",
+  "license": "ISC",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chanomie/homebridge-connectedbytcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chanomie/homebridge-connectedbytcp/issues"
+  },
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "dependencies": {
+    "request": "^2.65.0",
+    "node-uuid": "^1.4.6",
+    "xml2js":"^0.4.16"
+  },
+  "scripts" : {
+    "login" : "scripts/login.js"
+  }
+}

@@ -111,7 +111,7 @@ ConnectedByTcp.prototype = {
                     result.gip.room[i].device[j].state,
                     result.gip.room[i].device[j].level);
             
-              self.devices.push(newDevice);       
+              self.devices.push(newDevice);
             }
           }
         });
@@ -129,41 +129,40 @@ ConnectedByTcp.prototype = {
   }
 };
 
-
 function TcpLightbulb(log, deviceid, state, level) {
   var self = this;
   
   self.log = log;
-  self.name = deviceid;
+  self.name = "Bulb " + deviceid;
   self.deviceid = deviceid;
   self.state = state;
-  self.level = level;
-  
-  self.log("Creating Lightbulb with device id: " + self.deviceid);
-  self.service = new Service.Lightbulb(self.deviceid);
-  self.service
-    .getCharacteristic(Characteristic.On)
-    .on('set', self.setOnStatus.bind(this))
-    .on('get', self.getOnStatus.bind(this));
-    
-  // self.service.getCharacteristic(Characteristic.Brightness).on('set', self.setBrightness.bind(this)).on('get', this.getBrightness.bind(this));
-
+  self.level = level;  
+  self.log("Creating Lightbulb with device id '%s' and state '%s'", self.deviceid, self.state);
 };
 
 TcpLightbulb.prototype = {
-  getServices: function() {
-    return [this.service];
-  },
-  getOnStatus: function(callback) {
+  getPowerOn: function(callback) {
     var self = this;
     
-    self.log("Get On Status");
-    callback(null, 1);
+    self.log("Power state for the '%s' is %s", self.name, self.state);
+    callback(null, self.state);
   },
-  setOnStatus: function(powerOn, callback) {
+
+  setPowerOn: function(powerOn, callback) {
     var self = this;
-    
-    self.log("Set On Status");
+
+    self.log("Set power state on the '%s' to %s", self.name, self.state);
     callback(null);
+  },
+
+  getServices: function() {
+    var lightbulbService = new Service.Lightbulb(this.name);
+    
+    lightbulbService
+      .getCharacteristic(Characteristic.On)
+      .on('get', this.getPowerOn.bind(this))
+      .on('set', this.setPowerOn.bind(this));
+    
+    return [lightbulbService];
   }
-};
+}

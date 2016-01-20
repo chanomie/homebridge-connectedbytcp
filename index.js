@@ -15,6 +15,7 @@ function ConnectedByTcp(log, config) {
   this.name       = config["name"];
   this.ip         = config["ip"];
   this.token      = config["token"];
+  this.loglevel   = config["loglevel"];
   this.devices    = [];
   
   if(this.token === undefined) {
@@ -38,7 +39,7 @@ ConnectedByTcp.prototype = {
   syncHub: function() {
     // /gwr/gop.php?cmd=GWRLogin&data=<gip><version>1</version><email>[myuuid]</email><password>[myuuid]</password></gip>&fmt=xml
     var self = this,
-        loginAddress = "https://" + this.ip + "/gwr/gop.php",
+        hubAddress = "https://" + this.ip + "/gwr/gop.php",
         loginUid = uuid.v4(),
         cmd="GWRLogin",
         data=encodeURIComponent("<gip><version>1</version><email>"+loginUid+"</email><password>"+loginUid+"</password></gip>"),
@@ -46,7 +47,7 @@ ConnectedByTcp.prototype = {
 
     request({
       "rejectUnauthorized": false,
-      "url": loginAddress,
+      "url": hubAddress,
       "method": "POST",
       headers: {
         'Content-Type': 'text/xml'
@@ -76,14 +77,14 @@ ConnectedByTcp.prototype = {
   },
   search: function(searchCallback) {
     var self = this,
-        loginAddress = "https://" + self.ip + "/gwr/gop.php",
+        hubAddress = "https://" + self.ip + "/gwr/gop.php",
         cmd="RoomGetCarousel",
         data=encodeURIComponent("<gip><version>1</version><token>" + self.token + "</token><fields>name\ncontrol\npower\nproduct\nclass\nrealtype\nstatus</fields></gip>"),
         fmt="xml";
 
     request({
       "rejectUnauthorized": false,
-      "url": loginAddress,
+      "url": hubAddress,
       "method": "POST",
       headers: {
         'Content-Type': 'text/xml'
@@ -106,6 +107,7 @@ ConnectedByTcp.prototype = {
           for (var i = 0; i < result.gip.room.length; i++) {
             for (var j = 0; j < result.gip.room[i].device.length; j++) {
               var newDevice = new TcpLightbulb(
+                    self,
                     self.log, 
                     result.gip.room[i].device[j].did,
                     result.gip.room[i].device[j].state,
@@ -116,22 +118,107 @@ ConnectedByTcp.prototype = {
           }
         });
 
-		/*
-        self.log("error: " + error);
-        self.log("response: " + response);
-        self.log("body: " + body);
-        */
         if(searchCallback) {
           searchCallback();
         }
       }
     });
+  },
+  
+  roomGetCarousel: function(callback) {
+    var self = this,
+        hubAddress = "https://" + self.ip + "/gwr/gop.php",
+        cmd="RoomGetCarousel",
+        data=encodeURIComponent("<gip><version>1</version><token>" + self.token + "</token><fields>name\ncontrol\npower\nproduct\nclass\nrealtype\nstatus</fields></gip>"),
+        fmt="xml";
+
+    request({
+      "rejectUnauthorized": false,
+      "url": hubAddress,
+      "method": "POST",
+      headers: {
+        'Content-Type': 'text/xml'
+      },
+      body: "cmd=" + cmd + "&data=" + data + "&fmt=xml"
+    }, function(error, response, body) {
+      if (error && error.code == "ECONNREFUSED") {
+        self.log("Unabled to connect to IP, is this the right IP address for your hub?");
+      } else if (error) {
+        self.log("error.code: " + error.code);
+        self.log("error.errno: " + error.errno);
+        self.log("error.syscall: " + error.syscall);
+      } else if(body == "<gip><version>1</version><rc>404</rc></gip>") {
+        self.log("Hub is not in sync mode, set to sync mode an try again.");
+      } else {
+        xml2js.parseString(body, function (err, result) {
+          if(callback) {
+	          callback(result);
+	      }
+        });
+      }
+    });
+  
+  },
+  
+  deviceUpdateStatus: function(tcpLightbulb, callback) {
+    var self = this;
+    self.roomGetCarousel(function(result) {
+      for (var i = 0; i < result.gip.room.length; i++) {
+        for (var j = 0; j < result.gip.room[i].device.length; j++) {
+          tcpLightbulb.deviceid = result.gip.room[i].device[j].did;
+          tcpLightbulb.state = result.gip.room[i].device[j].state;
+          tcpLightbulb.level = result.gip.room[i].device[j].level;
+        }
+      }
+      
+      callback();
+    });
+  },
+  
+  deviceSendCommand: function(deviceid, statevalue) {
+    var self = this,
+        hubAddress = "https://" + self.ip + "/gwr/gop.php",
+        cmd="DeviceSendCommand",
+        data=encodeURIComponent("<gip><version>1</version><token>" + self.token + "</token><did>" + deviceid + "</did><value>" + statevalue + "</value></gip>");
+        fmt="xml",
+        body="cmd=" + cmd + "&data=" + data + "&fmt=xml";
+        
+    request({
+      "rejectUnauthorized": false,
+      "url": hubAddress,
+      "method": "POST",
+      headers: {
+        'Content-Type': 'text/xml'
+      },
+      body: body
+    }, function(error, response, body) {
+      if (error && error.code == "ECONNREFUSED") {
+        self.log("Unabled to connect to IP, is this the right IP address for your hub?");
+      } else if (error) {
+        self.log("error.code: " + error.code);
+        self.log("error.errno: " + error.errno);
+        self.log("error.syscall: " + error.syscall);
+      } else if(body == "<gip><version>1</version><rc>404</rc></gip>") {
+        self.log("Token is invalid, switch back to sync mode to try again.");
+      } else {
+        self.log("Parsing XML");
+        xml2js.parseString(body, function (err, result) {
+          self.log("Done parsing XML: " + JSON.stringify());
+        });
+        
+
+        self.log("error: " + error);
+        self.log("response: " + response);
+        self.log("body: " + body);
+      }
+    });
   }
 };
 
-function TcpLightbulb(log, deviceid, state, level) {
+function TcpLightbulb(connectedByTcp, log, deviceid, state, level) {
   var self = this;
   
+  self.connectedByTcp = connectedByTcp;
   self.log = log;
   self.name = "Bulb " + deviceid;
   self.deviceid = deviceid;
@@ -145,13 +232,16 @@ TcpLightbulb.prototype = {
     var self = this;
     
     self.log("Power state for the '%s' is %s", self.name, self.state);
-    callback(null, self.state);
+    self.connectedByTcp.deviceUpdateStatus(this, function() {
+      callback(null, self.state > 0);  
+    });
   },
 
   setPowerOn: function(powerOn, callback) {
     var self = this;
 
-    self.log("Set power state on the '%s' to %s", self.name, self.state);
+    self.log("Set power state on the '%s' to %s", self.name, powerOn);
+    self.connectedByTcp.deviceSendCommand(self.deviceid, powerOn == true ? 1 : 0);
     callback(null);
   },
 

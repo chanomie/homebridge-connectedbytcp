@@ -37,7 +37,6 @@ ConnectedByTcp.prototype = {
     callback(self.devices);
   },
   syncHub: function() {
-    // /gwr/gop.php?cmd=GWRLogin&data=<gip><version>1</version><email>[myuuid]</email><password>[myuuid]</password></gip>&fmt=xml
     var self = this,
         hubAddress = "https://" + this.ip + "/gwr/gop.php",
         loginUid = uuid.v4(),
@@ -126,6 +125,9 @@ ConnectedByTcp.prototype = {
       } else if(body == "<gip><version>1</version><rc>404</rc></gip>") {
         self.log("Hub is not in sync mode, set to sync mode an try again.");
       } else {
+        if(self.loglevel >= 3) {
+          self.log("roomGetCarousel result: %s", body);
+        }
         xml2js.parseString(body, function (err, result) {
           if(callback) {
 	          callback(result);

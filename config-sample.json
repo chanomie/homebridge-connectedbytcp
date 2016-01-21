@@ -11,7 +11,8 @@
        {
          "platform": "ConnectedByTcp",
          "name": "ConnectedByTcp",
-         "ip": "172.16.1.40"
+         "ip": "172.16.1.40",
+         "loglevel":"0"
        }
     ],
     "accessories": []

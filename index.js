@@ -82,46 +82,22 @@ ConnectedByTcp.prototype = {
         data=encodeURIComponent("<gip><version>1</version><token>" + self.token + "</token><fields>name\ncontrol\npower\nproduct\nclass\nrealtype\nstatus</fields></gip>"),
         fmt="xml";
 
-    request({
-      "rejectUnauthorized": false,
-      "url": hubAddress,
-      "method": "POST",
-      headers: {
-        'Content-Type': 'text/xml'
-      },
-      body: "cmd=" + cmd + "&data=" + data + "&fmt=xml"
-    }, function(error, response, body) {
-      if (error && error.code == "ECONNREFUSED") {
-        self.log("Unabled to connect to IP, is this the right IP address for your hub?");
-      } else if (error) {
-        self.log("error.code: " + error.code);
-        self.log("error.errno: " + error.errno);
-        self.log("error.syscall: " + error.syscall);
-      } else if(body == "<gip><version>1</version><rc>404</rc></gip>") {
-        self.log("Hub is not in sync mode, set to sync mode an try again.");
-      } else {
-        self.log("Parsing XML");
-        xml2js.parseString(body, function (err, result) {
-          self.log("Done parsing XML: " + JSON.stringify());
-          // For each room for each device, get the did, state, level, and store it.
-          for (var i = 0; i < result.gip.room.length; i++) {
-            for (var j = 0; j < result.gip.room[i].device.length; j++) {
-              var newDevice = new TcpLightbulb(
-                    self,
-                    self.log, 
-                    result.gip.room[i].device[j].did,
-                    result.gip.room[i].device[j].state,
-                    result.gip.room[i].device[j].level);
+    self.roomGetCarousel(function(result) {
+      for (var i = 0; i < result.gip.room.length; i++) {
+        for (var j = 0; j < result.gip.room[i].device.length; j++) {
+          for (var k = 0; k < result.gip.room[i].device[j].did.length; k++) {
+            var newDevice = new TcpLightbulb(
+                              self,
+                              self.log, 
+                              result.gip.room[i].device[j].did[k],
+                              result.gip.room[i].device[j].state[k],
+                              result.gip.room[i].device[j].level[k]);
             
               self.devices.push(newDevice);
-            }
           }
-        });
-
-        if(searchCallback) {
-          searchCallback();
         }
       }
+      searchCallback();
     });
   },
   
@@ -162,12 +138,24 @@ ConnectedByTcp.prototype = {
   
   deviceUpdateStatus: function(tcpLightbulb, callback) {
     var self = this;
+    
     self.roomGetCarousel(function(result) {
+      if(self.loglevel >= 3) {
+        self.log("deviceUpdateStatus: Calback from roomGetCarousel : [%s]", JSON.stringify(result));
+      }
       for (var i = 0; i < result.gip.room.length; i++) {
         for (var j = 0; j < result.gip.room[i].device.length; j++) {
-          tcpLightbulb.deviceid = result.gip.room[i].device[j].did;
-          tcpLightbulb.state = result.gip.room[i].device[j].state;
-          tcpLightbulb.level = result.gip.room[i].device[j].level;
+          for (var k = 0; k < result.gip.room[i].device[j].did.length; k++) {
+            if(tcpLightbulb.deviceid == result.gip.room[i].device[j].did[k]) {
+              if(self.loglevel >= 3) {
+                self.log("deviceUpdateStatus: Updating bulb based on result [%s]",
+                  JSON.stringify(result.gip.room[i].device[j]));
+              }
+                
+              tcpLightbulb.state = result.gip.room[i].device[j].state[k];
+              tcpLightbulb.level = result.gip.room[i].device[j].level[k];
+          }
+          }
         }
       }
       
@@ -179,10 +167,15 @@ ConnectedByTcp.prototype = {
     var self = this,
         hubAddress = "https://" + self.ip + "/gwr/gop.php",
         cmd="DeviceSendCommand",
-        data=encodeURIComponent("<gip><version>1</version><token>" + self.token + "</token><did>" + deviceid + "</did><value>" + statevalue + "</value></gip>");
+        unencodedData = "<gip><version>1</version><token>" + self.token + "</token><did>" + deviceid + "</did><value>" + statevalue + "</value></gip>",
+        data=encodeURIComponent(unencodedData);
         fmt="xml",
         body="cmd=" + cmd + "&data=" + data + "&fmt=xml";
-        
+
+    if(self.loglevel >= 3) {
+      self.log("Sending device request: %s", unencodedData);
+    }        
+
     request({
       "rejectUnauthorized": false,
       "url": hubAddress,
@@ -231,7 +224,7 @@ TcpLightbulb.prototype = {
   getPowerOn: function(callback) {
     var self = this;
     
-    self.log("Power state for the '%s' is %s", self.name, self.state);
+    self.log("getPowerOn: Power state for the '%s' is %s", self.name, self.state);
     self.connectedByTcp.deviceUpdateStatus(this, function() {
       callback(null, self.state > 0);  
     });

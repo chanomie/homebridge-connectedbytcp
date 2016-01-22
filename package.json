@@ -1,6 +1,6 @@
 {
   "name": "homebridge-connectedbytcp",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "description": "Connected by TCP plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
   "keywords": [

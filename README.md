@@ -139,7 +139,7 @@ Reponse:
 </gip>
 ```
 
-## DeviceSendCommand
+## DeviceSendCommand - On/Off
 
 Sends a command to a device, such as turning the lights on/off.
 
@@ -153,6 +153,32 @@ data:
   <token>e2de937chr0lhrlqd6bus3l2z5jcy5p3vs7013bq</token>
   <did>216518569934732173</did>
   <value>1</value>
+</gip>
+```
+
+Result:
+```
+<gip>
+  <version>1</version>
+  <rc>200</rc>
+</gip>
+```
+
+## DeviceSendCommand - Dimming
+
+Sends a command to a device for the level (dimming) of the device.
+
+Request:
+```
+POST
+cmd:RoomGetCarousel
+data:
+<gip>
+  <version>1</version>
+  <token>e2de937chr0lhrlqd6bus3l2z5jcy5p3vs7013bq</token>
+  <did>216518569934732173</did>
+  <value>50</value>
+  <type>level</type>
 </gip>
 ```
 
@@ -453,3 +479,9 @@ Example Response:
   </gwrcmd>
 </gwrcmds>
 ``` 
+
+# Thanks
+
+Thanks to (stockmopar) who figured out security when TCP added the token that required
+syncing the hub.  This article was vital in getting me back in business:
+http://home.stockmopar.com/updated-connected-by-tcp-api/

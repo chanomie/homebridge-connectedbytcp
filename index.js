@@ -207,6 +207,52 @@ ConnectedByTcp.prototype = {
         self.log("body: " + body);
       }
     });
+  },
+  
+  deviceSendCommandLevel: function(deviceid, level) {
+    var self = this,
+        hubAddress = "https://" + self.ip + "/gwr/gop.php",
+        cmd="DeviceSendCommand",
+        unencodedData = "<gip><version>1</version><token>" + self.token + "</token><did>" + deviceid + "</did><value>" + level + "</value><type>level</type></gip>",
+        data=encodeURIComponent(unencodedData);
+        fmt="xml",
+        body="cmd=" + cmd + "&data=" + data + "&fmt=xml";
+
+    if(self.loglevel >= 3) {
+      self.log("Sending device request: %s", unencodedData);
+    }        
+
+    request({
+      "rejectUnauthorized": false,
+      "url": hubAddress,
+      "method": "POST",
+      headers: {
+        'Content-Type': 'text/xml'
+      },
+      body: body
+    }, function(error, response, body) {
+      if (error && error.code == "ECONNREFUSED") {
+        self.log("Unabled to connect to IP, is this the right IP address for your hub?");
+      } else if (error) {
+        self.log("error.code: " + error.code);
+        self.log("error.errno: " + error.errno);
+        self.log("error.syscall: " + error.syscall);
+      } else if(body == "<gip><version>1</version><rc>404</rc></gip>") {
+        self.log("Token is invalid, switch back to sync mode to try again.");
+      } else {
+        self.log("Parsing XML");
+        xml2js.parseString(body, function (err, result) {
+          if(self.loglevel >= 3) {
+            self.log("Done parsing XML: " + JSON.stringify());
+          }
+        });
+        
+
+        self.log("error: " + error);
+        self.log("response: " + response);
+        self.log("body: " + body);
+      }
+    });
   }
 };
 
@@ -235,8 +281,25 @@ TcpLightbulb.prototype = {
   setPowerOn: function(powerOn, callback) {
     var self = this;
 
-    self.log("Set power state on the '%s' to %s", self.name, powerOn);
+    self.log("setPowerOn: Set power state on the '%s' to %s", self.name, powerOn);
     self.connectedByTcp.deviceSendCommand(self.deviceid, powerOn == true ? 1 : 0);
+    callback(null);
+  },
+  
+  getBrightness: function(callback) {
+    var self = this;
+    
+    self.log("getBrightness: Brightness for the '%s' is %s", self.name, self.level);
+    self.connectedByTcp.deviceUpdateStatus(this, function() {
+      callback(null, parseInt(self.level));
+    });
+  },
+
+  setBrightness: function(level, callback) {
+    var self = this;
+    
+    self.log("setBrightness: Set brightness for the '%s' to %s", self.name, level);
+    self.connectedByTcp.deviceSendCommandLevel(self.deviceid, level);
     callback(null);
   },
 
@@ -247,7 +310,12 @@ TcpLightbulb.prototype = {
       .getCharacteristic(Characteristic.On)
       .on('get', this.getPowerOn.bind(this))
       .on('set', this.setPowerOn.bind(this));
-    
+      
+    lightbulbService
+      .addCharacteristic(Characteristic.Brightness)
+      .on('get', this.getBrightness.bind(this))
+      .on('set', this.setBrightness.bind(this));
+            
     return [lightbulbService];
   }
 }

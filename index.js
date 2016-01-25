@@ -85,12 +85,17 @@ ConnectedByTcp.prototype = {
       for (var i = 0; i < result.gip.room.length; i++) {
         for (var j = 0; j < result.gip.room[i].device.length; j++) {
           for (var k = 0; k < result.gip.room[i].device[j].did.length; k++) {
+            self.log(JSON.stringify(result.gip.room[i].device[j]));
+            var level = 0;
+            if("level" in result.gip.room[i].device[j]) {
+              level = result.gip.room[i].device[j].level[k];
+            }
             var newDevice = new TcpLightbulb(
                               self,
                               self.log, 
                               result.gip.room[i].device[j].did[k],
                               result.gip.room[i].device[j].state[k],
-                              result.gip.room[i].device[j].level[k]);
+                              level);
             
               self.devices.push(newDevice);
           }

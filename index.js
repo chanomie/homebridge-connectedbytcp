@@ -160,7 +160,11 @@ ConnectedByTcp.prototype = {
               }
                 
               tcpLightbulb.state = result.gip.room[i].device[j].state[k];
-              tcpLightbulb.level = result.gip.room[i].device[j].level[k];
+              if("level" in result.gip.room[i].device[j]) {
+                tcpLightbulb.level = result.gip.room[i].device[j].level[k];
+              } else {
+                tcpLightbulb.level = 0;
+              }
           }
           }
         }

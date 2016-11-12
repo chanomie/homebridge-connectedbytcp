@@ -88,7 +88,7 @@ ConnectedByTcp.prototype = {
             self.log(JSON.stringify(result.gip.room[i].device[j]));
             var level = 0;
             if("level" in result.gip.room[i].device[j]) {
-              level = result.gip.room[i].device[j].level[k];
+              level = result.gip.room[i].device[j].level ? result.gip.room[i].device[j].level[k] : 0;
             }
             var newDevice = new TcpLightbulb(
                               self,
@@ -159,7 +159,7 @@ ConnectedByTcp.prototype = {
                   JSON.stringify(result.gip.room[i].device[j]));
               }
                 
-              tcpLightbulb.state = result.gip.room[i].device[j].state[k];
+              tcpLightbulb.level = result.gip.room[i].device[j].level ? result.gip.room[i].device[j].level[k] : 0;
               if("level" in result.gip.room[i].device[j]) {
                 tcpLightbulb.level = result.gip.room[i].device[j].level[k];
               } else {

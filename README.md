@@ -2,7 +2,7 @@
 Home bridge Plugin for Connected by TCP
 
 # Setting up your TCP Lights
-Fixtures are ignored - is explose each as an individual bulb.
+Fixtures are ignored - each individual bulb is exposed.
 
 # Installation
  * Install homebridge using: npm install -g homebridge
@@ -32,7 +32,26 @@ Afterwards, add the token to your config and restart homebridge.
          "platform": "ConnectedByTcp",
          "name": "ConnectedByTcp",
          "ip": "172.16.1.40",
-         "loglevel":"3"         
+         "loglevel":"3",
+         "token":"e2de937chr0lhrlqd6bus3l2z5jcy5p3vs7013bq"
+       }
+    ],
+```
+
+Optionally, set names for the deviceids in Homekit:
+
+```
+    "platforms": [
+       {
+         "platform": "ConnectedByTcp",
+         "name": "ConnectedByTcp",
+         "ip": "172.16.1.40",
+         "loglevel":"3",
+         "token":"e2de937chr0lhrlqd6bus3l2z5jcy5p3vs7013bq",
+         "deviceNames": {
+           "219373657216334108": "Desk Lamp",
+           "219373657216334927": "Stand Lamp"
+         }
        }
     ],
 ```
@@ -478,7 +497,7 @@ Example Response:
     </gdata>
   </gwrcmd>
 </gwrcmds>
-``` 
+```
 
 # Thanks
 

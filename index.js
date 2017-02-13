@@ -17,7 +17,8 @@ function ConnectedByTcp(log, config) {
   this.token      = config["token"];
   this.loglevel   = config["loglevel"];
   this.devices    = [];
-  
+  this.deviceNames = config["deviceNames"];
+
   if(this.token === undefined) {
     this.log("Password not in config, attempting to sync hub: [" + this.ip + "]");
     this.syncHub();
@@ -27,7 +28,7 @@ function ConnectedByTcp(log, config) {
 ConnectedByTcp.prototype = {
   accessories: function (callback) {
     var self = this;
-    
+
     self.log("in accessories");
     self.search(function() { self.registerAccessories(callback) });
   },
@@ -92,11 +93,11 @@ ConnectedByTcp.prototype = {
             }
             var newDevice = new TcpLightbulb(
                               self,
-                              self.log, 
+                              self.log,
                               result.gip.room[i].device[j].did[k],
                               result.gip.room[i].device[j].state[k],
                               level);
-            
+
               self.devices.push(newDevice);
           }
         }
@@ -104,7 +105,7 @@ ConnectedByTcp.prototype = {
       searchCallback();
     });
   },
-  
+
   roomGetCarousel: function(callback) {
     var self = this,
         hubAddress = "https://" + self.ip + "/gwr/gop.php",
@@ -140,12 +141,12 @@ ConnectedByTcp.prototype = {
         });
       }
     });
-  
+
   },
-  
+
   deviceUpdateStatus: function(tcpLightbulb, callback) {
     var self = this;
-    
+
     self.roomGetCarousel(function(result) {
       if(self.loglevel >= 3) {
         self.log("deviceUpdateStatus: Calback from roomGetCarousel : [%s]", JSON.stringify(result));
@@ -158,10 +159,10 @@ ConnectedByTcp.prototype = {
                 self.log("deviceUpdateStatus: Updating bulb based on result [%s]",
                   JSON.stringify(result.gip.room[i].device[j]));
               }
-                
-              tcpLightbulb.level = result.gip.room[i].device[j].level ? result.gip.room[i].device[j].level[k] : 0;
+
+              tcpLightbulb.state = result.gip.room[i].device[j].state[k];
               if("level" in result.gip.room[i].device[j]) {
-                tcpLightbulb.level = result.gip.room[i].device[j].level[k];
+                tcpLightbulb.level = result.gip.room[i].device[j].level ? result.gip.room[i].device[j].level[k] : 0;
               } else {
                 tcpLightbulb.level = 0;
               }
@@ -169,11 +170,11 @@ ConnectedByTcp.prototype = {
           }
         }
       }
-      
+
       callback();
     });
   },
-  
+
   deviceSendCommand: function(deviceid, statevalue) {
     var self = this,
         hubAddress = "https://" + self.ip + "/gwr/gop.php",
@@ -185,7 +186,7 @@ ConnectedByTcp.prototype = {
 
     if(self.loglevel >= 3) {
       self.log("Sending device request: %s", unencodedData);
-    }        
+    }
 
     request({
       "rejectUnauthorized": false,
@@ -209,7 +210,7 @@ ConnectedByTcp.prototype = {
         xml2js.parseString(body, function (err, result) {
           self.log("Done parsing XML: " + JSON.stringify());
         });
-        
+
 
         self.log("error: " + error);
         self.log("response: " + response);
@@ -217,7 +218,7 @@ ConnectedByTcp.prototype = {
       }
     });
   },
-  
+
   deviceSendCommandLevel: function(deviceid, level) {
     var self = this,
         hubAddress = "https://" + self.ip + "/gwr/gop.php",
@@ -229,7 +230,7 @@ ConnectedByTcp.prototype = {
 
     if(self.loglevel >= 3) {
       self.log("Sending device request: %s", unencodedData);
-    }        
+    }
 
     request({
       "rejectUnauthorized": false,
@@ -255,7 +256,7 @@ ConnectedByTcp.prototype = {
             self.log("Done parsing XML: " + JSON.stringify());
           }
         });
-        
+
 
         self.log("error: " + error);
         self.log("response: " + response);
@@ -267,23 +268,27 @@ ConnectedByTcp.prototype = {
 
 function TcpLightbulb(connectedByTcp, log, deviceid, state, level) {
   var self = this;
-  
+
   self.connectedByTcp = connectedByTcp;
   self.log = log;
-  self.name = "Bulb " + deviceid;
+  if (connectedByTcp.deviceNames[deviceid]) {
+    self.name = connectedByTcp.deviceNames[deviceid];
+  } else {
+    self.name = "Bulb " + deviceid;
+  }
   self.deviceid = deviceid;
   self.state = state;
-  self.level = level;  
+  self.level = level;
   self.log("Creating Lightbulb with device id '%s' and state '%s'", self.deviceid, self.state);
 };
 
 TcpLightbulb.prototype = {
   getPowerOn: function(callback) {
     var self = this;
-    
+
     self.log("getPowerOn: Power state for the '%s' is %s", self.name, self.state);
     self.connectedByTcp.deviceUpdateStatus(this, function() {
-      callback(null, self.state > 0);  
+      callback(null, self.state > 0);
     });
   },
 
@@ -294,10 +299,10 @@ TcpLightbulb.prototype = {
     self.connectedByTcp.deviceSendCommand(self.deviceid, powerOn == true ? 1 : 0);
     callback(null);
   },
-  
+
   getBrightness: function(callback) {
     var self = this;
-    
+
     self.log("getBrightness: Brightness for the '%s' is %s", self.name, self.level);
     self.connectedByTcp.deviceUpdateStatus(this, function() {
       callback(null, parseInt(self.level));
@@ -306,7 +311,7 @@ TcpLightbulb.prototype = {
 
   setBrightness: function(level, callback) {
     var self = this;
-    
+
     self.log("setBrightness: Set brightness for the '%s' to %s", self.name, level);
     self.connectedByTcp.deviceSendCommandLevel(self.deviceid, level);
     callback(null);
@@ -314,17 +319,17 @@ TcpLightbulb.prototype = {
 
   getServices: function() {
     var lightbulbService = new Service.Lightbulb(this.name);
-    
+
     lightbulbService
       .getCharacteristic(Characteristic.On)
       .on('get', this.getPowerOn.bind(this))
       .on('set', this.setPowerOn.bind(this));
-      
+
     lightbulbService
       .addCharacteristic(Characteristic.Brightness)
       .on('get', this.getBrightness.bind(this))
       .on('set', this.setBrightness.bind(this));
-            
+
     return [lightbulbService];
   }
 }

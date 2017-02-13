@@ -5,14 +5,19 @@
         "port": 51826,
         "pin": "031-45-154"
     },
-    
+
     "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
     "platforms": [
        {
          "platform": "ConnectedByTcp",
          "name": "ConnectedByTcp",
          "ip": "172.16.1.40",
-         "loglevel":"0"
+         "loglevel":"0",
+         "token":"aaaabbbbccccddddeeeeffffgggghhhhiiiijjjj",
+         "deviceNames": {
+           "219373657216334108": "Desk Lamp",
+           "219373657216334927": "Stand Lamp"
+         }
        }
     ],
     "accessories": []

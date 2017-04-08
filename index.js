@@ -271,7 +271,7 @@ function TcpLightbulb(connectedByTcp, log, deviceid, state, level) {
 
   self.connectedByTcp = connectedByTcp;
   self.log = log;
-  if (connectedByTcp.deviceNames[deviceid]) {
+  if (connectedByTcp.deviceNames && connectedByTcp.deviceNames[deviceid]) {
     self.name = connectedByTcp.deviceNames[deviceid];
   } else {
     self.name = "Bulb " + deviceid;
